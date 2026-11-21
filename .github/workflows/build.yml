@@ -1,0 +1,36 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.9
+
+      # The repo contains FluxExplorer.zip (uploaded as-is), so unzip it first
+      - name: Unzip project
+        run: |
+          unzip -q FluxExplorer.zip -d src_project
+          echo "PROJECT_DIR=$(dirname "$(find src_project -name settings.gradle.kts | head -n 1)")" >> "$GITHUB_ENV"
+
+      - name: Build debug APK
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: gradle assembleDebug --no-daemon
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FluxExplorer-debug-apk
+          path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/*.apk
